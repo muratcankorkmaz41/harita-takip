@@ -6,7 +6,9 @@ Assetto Corsa için hazırladığım harita ve pist projelerinin (Blender modell
 
 ## Tanıtım Videosu
 
-30 saniyelik tanıtım videosu: [video/tanitim.mp4](video/tanitim.mp4)
+https://github.com/user-attachments/assets/2138949a-3787-4254-ac9e-c9ac3b6139aa
+
+Video dosyası repoda da bulunur: [video/tanitim.mp4](video/tanitim.mp4)
 
 ## Özellikler
 
