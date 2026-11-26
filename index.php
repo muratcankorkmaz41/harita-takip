@@ -1,17 +1,22 @@
 <?php
 require_once 'functions.php';
 
-$kayitlar = kayitlariGetir();
+// Arama, filtre ve sıralama değerleri adres satırından (GET) okunur
+$kosul    = listeKosullariAl();
+$kayitlar = kayitlariGetir($kosul);
+$filtreVar = $kosul['q'] !== '' || $kosul['durum'] !== '' || $kosul['kategori'] !== '';
 
 // Ekleme, güncelleme ya da silmeden sonra bırakılan bildirim (bir kez gösterilir)
 $bildirim = bildirimAl();
 $vurguId  = $bildirim['vurguId'] ?? 0;
 
-// Özet sayıları
-$toplam    = count($kayitlar);
-$planlanan = durumSay($kayitlar, 'Planlandı');
-$devam     = durumSay($kayitlar, 'Devam ediyor');
-$tamam     = durumSay($kayitlar, 'Tamamlandı');
+// Özet sayıları (filtrelerden bağımsız, tüm kayıtlar)
+$ozet      = kayitOzeti();
+$toplam    = $ozet['toplam'];
+$planlanan = $ozet['Planlandı'];
+$devam     = $ozet['Devam ediyor'];
+$tamam     = $ozet['Tamamlandı'];
+$gorunen   = count($kayitlar);
 $oran      = $toplam > 0 ? (int) round($tamam / $toplam * 100) : 0;
 
 $haritaKayitlari = haritaVerisi($kayitlar);
@@ -120,32 +125,54 @@ require 'header.php';
         <div class="bolum-baslik">
             <div>
                 <h2>Proje Kayıtları</h2>
-                <p><span data-gorunen><?php echo $toplam; ?></span> / <?php echo $toplam; ?> kayıt gösteriliyor</p>
+                <p><?php echo $gorunen; ?> / <?php echo $toplam; ?> kayıt gösteriliyor</p>
             </div>
 
             <?php if ($toplam > 0): ?>
-                <div class="arac-cubugu">
+                <form class="arac-cubugu" method="get" action="index.php#kayitlar" role="search" data-filtre-formu>
                     <label class="arama">
                         <i class="bi bi-search" aria-hidden="true"></i>
-                        <span class="gorunmez">Kayıtlarda ara</span>
-                        <input type="search" id="arama" placeholder="Kayıtlarda ara…" autocomplete="off">
+                        <span class="gorunmez">Başlık veya açıklamada ara</span>
+                        <input type="search" name="q" id="arama" placeholder="Kayıtlarda ara…" autocomplete="off"
+                               maxlength="100" value="<?php echo e($kosul['q']); ?>">
                     </label>
-                    <div class="filtreler" role="group" aria-label="Duruma göre filtrele">
-                        <button type="button" class="filtre aktif" data-filtre="hepsi" aria-pressed="true">Tümü</button>
-                        <button type="button" class="filtre" data-filtre="plan" aria-pressed="false">Planlandı</button>
-                        <button type="button" class="filtre" data-filtre="devam" aria-pressed="false">Devam</button>
-                        <button type="button" class="filtre" data-filtre="tamam" aria-pressed="false">Tamam</button>
+                    <div class="filtreler" role="radiogroup" aria-label="Duruma göre filtrele">
+                        <?php foreach (['' => 'Tümü', 'Planlandı' => 'Planlandı', 'Devam ediyor' => 'Devam', 'Tamamlandı' => 'Tamam'] as $deger => $etiket): ?>
+                            <label class="filtre<?php echo $kosul['durum'] === $deger ? ' aktif' : ''; ?>">
+                                <input type="radio" name="durum" value="<?php echo e($deger); ?>"
+                                    <?php echo $kosul['durum'] === $deger ? 'checked' : ''; ?>>
+                                <?php echo e($etiket); ?>
+                            </label>
+                        <?php endforeach; ?>
                     </div>
                     <label class="secim">
                         <span class="gorunmez">Kategoriye göre filtrele</span>
-                        <select id="kategori-filtre">
+                        <select name="kategori" id="kategori-filtre">
                             <option value="">Tüm kategoriler</option>
                             <?php foreach (kategoriListesi() as $kategori): ?>
-                                <option value="<?php echo e($kategori); ?>"><?php echo e($kategori); ?></option>
+                                <option value="<?php echo e($kategori); ?>" <?php echo $kosul['kategori'] === $kategori ? 'selected' : ''; ?>>
+                                    <?php echo e($kategori); ?>
+                                </option>
                             <?php endforeach; ?>
                         </select>
                     </label>
-                </div>
+                    <label class="secim">
+                        <span class="gorunmez">Sıralama</span>
+                        <select name="sirala" id="sirala">
+                            <?php foreach (siralamaListesi() as $anahtar => [$etiket]): ?>
+                                <option value="<?php echo e($anahtar); ?>" <?php echo $kosul['sirala'] === $anahtar ? 'selected' : ''; ?>>
+                                    <?php echo e($etiket); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
+                    <button type="submit" class="buton hayalet kucuk-buton">
+                        <i class="bi bi-funnel" aria-hidden="true"></i> Uygula
+                    </button>
+                    <?php if ($filtreVar || $kosul['sirala'] !== 'yeni'): ?>
+                        <a class="metin-buton" href="index.php#kayitlar"><i class="bi bi-x-lg" aria-hidden="true"></i> Temizle</a>
+                    <?php endif; ?>
+                </form>
             <?php endif; ?>
         </div>
 
@@ -154,6 +181,12 @@ require 'header.php';
                 <i class="bi bi-inbox" aria-hidden="true"></i>
                 <p>Henüz kayıt bulunmuyor.</p>
                 <a class="buton birincil" href="ekle.php"><i class="bi bi-plus-lg" aria-hidden="true"></i> İlk kaydı ekle</a>
+            </div>
+        <?php elseif ($gorunen === 0): ?>
+            <div class="bos-durum">
+                <i class="bi bi-search" aria-hidden="true"></i>
+                <p>Aramanıza uyan kayıt bulunamadı.</p>
+                <a class="buton hayalet" href="index.php#kayitlar">Filtreleri temizle</a>
             </div>
         <?php else: ?>
             <div class="liste">
@@ -207,11 +240,6 @@ require 'header.php';
                         </div>
                     </article>
                 <?php endforeach; ?>
-            </div>
-            <div class="bos-durum filtre-bos" hidden>
-                <i class="bi bi-search" aria-hidden="true"></i>
-                <p>Aramanıza uyan kayıt bulunamadı.</p>
-                <button type="button" class="buton hayalet" data-filtre-sifirla>Filtreleri temizle</button>
             </div>
         <?php endif; ?>
     </section>

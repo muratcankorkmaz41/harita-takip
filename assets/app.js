@@ -7,7 +7,6 @@
 
     function $(secici, kok) { return (kok || document).querySelector(secici); }
     function $$(secici, kok) { return Array.prototype.slice.call((kok || document).querySelectorAll(secici)); }
-    function kucult(metin) { return (metin || '').toLocaleLowerCase('tr'); }
 
     /* ------------------------------------------------------------------
        1) Kaydırınca beliren öğeler
@@ -196,65 +195,16 @@
     }
 
     /* ------------------------------------------------------------------
-       6) Ana sayfa: arama ve filtreler
+       6) Ana sayfa: arama, filtre ve sıralama formu
+          Filtreleme sunucuda (SQL) yapılır; burada yalnızca seçim
+          değişince form kendiliğinden gönderilir.
        ------------------------------------------------------------------ */
     function filtreleriBaslat() {
-        var kartlar = $$('.liste .kart');
-        if (!kartlar.length) { return; }
-
-        var arama = $('#arama');
-        var kategoriSec = $('#kategori-filtre');
-        var butonlar = $$('.filtre');
-        var bos = $('.filtre-bos');
-        var gorunenEl = $('[data-gorunen]');
-        var durum = 'hepsi';
-
-        // Her kartın aranabilir metni (Türkçe küçük harf kurallarıyla)
-        kartlar.forEach(function (k) {
-            k._arama = kucult(k.textContent.replace(/\s+/g, ' '));
+        var form = $('[data-filtre-formu]');
+        if (!form) { return; }
+        $$('select, input[type="radio"]', form).forEach(function (el) {
+            el.addEventListener('change', function () { form.submit(); });
         });
-
-        function uygula() {
-            var metin = kucult(arama ? arama.value.trim() : '');
-            var kategori = kategoriSec ? kategoriSec.value : '';
-            var gorunen = 0;
-            kartlar.forEach(function (k) {
-                var uygun = (durum === 'hepsi' || k.getAttribute('data-durum') === durum)
-                    && (!kategori || k.getAttribute('data-kategori') === kategori)
-                    && (!metin || k._arama.indexOf(metin) !== -1);
-                k.hidden = !uygun;
-                if (uygun) {
-                    gorunen++;
-                    k.classList.add('gorundu');
-                }
-            });
-            if (gorunenEl) { gorunenEl.textContent = String(gorunen); }
-            if (bos) { bos.hidden = gorunen !== 0; }
-        }
-
-        butonlar.forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                durum = btn.getAttribute('data-filtre');
-                butonlar.forEach(function (b) {
-                    var aktif = b === btn;
-                    b.classList.toggle('aktif', aktif);
-                    b.setAttribute('aria-pressed', aktif ? 'true' : 'false');
-                });
-                uygula();
-            });
-        });
-        if (arama) { arama.addEventListener('input', uygula); }
-        if (kategoriSec) { kategoriSec.addEventListener('change', uygula); }
-
-        var sifirla = $('[data-filtre-sifirla]');
-        if (sifirla) {
-            sifirla.addEventListener('click', function () {
-                if (arama) { arama.value = ''; }
-                if (kategoriSec) { kategoriSec.value = ''; }
-                var tumu = $('.filtre[data-filtre="hepsi"]');
-                if (tumu) { tumu.click(); } else { uygula(); }
-            });
-        }
     }
 
     /* ------------------------------------------------------------------

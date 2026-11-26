@@ -122,13 +122,107 @@ function durumSinifi(string $durum): string
 }
 
 /**
- * Veritabanındaki kayıtları en yeniden eskiye doğru listeler.
+ * Sıralama seçenekleri: adres satırındaki anahtar => [etiket, ORDER BY ifadesi].
+ * ORDER BY kısmı parametre olarak gönderilemez; bu yüzden kullanıcıdan gelen değer
+ * doğrudan SQL'e yazılmaz, yalnızca bu listedeki sabit ifadelerden biri seçilir.
  */
-function kayitlariGetir(): array
+function siralamaListesi(): array
 {
-    $sorgu = db()->query('SELECT id, baslik, kategori, durum, aciklama, enlem, boylam
-                          FROM kayitlar ORDER BY id DESC');
+    return [
+        'yeni'     => ['En yeni',            'id DESC'],
+        'eski'     => ['En eski',            'id ASC'],
+        'guncel'   => ['Son güncellenen',    'guncelleme_tarihi DESC, id DESC'],
+        'baslik'   => ['Başlık (A → Z)',     'baslik ASC'],
+        'baslik-z' => ['Başlık (Z → A)',     'baslik DESC'],
+        'durum'    => ['Duruma göre',        'durum ASC, id DESC'],   // ENUM sırası: Planlandı, Devam ediyor, Tamamlandı
+    ];
+}
+
+/**
+ * Adres satırındaki (GET) arama/filtre/sıralama değerlerini okur.
+ * Listede olmayan değerler yok sayılır.
+ */
+function listeKosullariAl(): array
+{
+    $al = function (string $alan): string {
+        $deger = $_GET[$alan] ?? '';
+        return is_string($deger) ? trim($deger) : '';
+    };
+
+    $kosul = [
+        'q'        => mb_substr($al('q'), 0, 100),
+        'durum'    => $al('durum'),
+        'kategori' => $al('kategori'),
+        'sirala'   => $al('sirala'),
+    ];
+
+    if (!in_array($kosul['durum'], durumListesi(), true)) {
+        $kosul['durum'] = '';
+    }
+    if (!in_array($kosul['kategori'], kategoriListesi(), true)) {
+        $kosul['kategori'] = '';
+    }
+    if (!array_key_exists($kosul['sirala'], siralamaListesi())) {
+        $kosul['sirala'] = 'yeni';
+    }
+    return $kosul;
+}
+
+/**
+ * Kayıtları arama, filtre ve sıralama koşullarına göre veritabanından getirir.
+ * WHERE koşulları yalnızca dolu filtreler için eklenir; değerler parametreyle gönderilir.
+ */
+function kayitlariGetir(array $kosul = []): array
+{
+    $sartlar = [];
+    $param   = [];
+
+    if (($kosul['q'] ?? '') !== '') {
+        // % ve _ LIKE içinde joker karakterdir; kullanıcı yazdıysa düz karakter olarak aranır
+        $aranan = '%' . addcslashes($kosul['q'], '%_\\') . '%';
+        $sartlar[] = '(baslik LIKE :q1 OR aciklama LIKE :q2)';
+        $param[':q1'] = $aranan;
+        $param[':q2'] = $aranan;
+    }
+    if (($kosul['durum'] ?? '') !== '') {
+        $sartlar[] = 'durum = :durum';
+        $param[':durum'] = $kosul['durum'];
+    }
+    if (($kosul['kategori'] ?? '') !== '') {
+        $sartlar[] = 'kategori = :kategori';
+        $param[':kategori'] = $kosul['kategori'];
+    }
+
+    $siralamalar = siralamaListesi();
+    $siralama = $siralamalar[$kosul['sirala'] ?? 'yeni'][1] ?? $siralamalar['yeni'][1];
+
+    $sql = 'SELECT id, baslik, kategori, durum, aciklama, enlem, boylam FROM kayitlar';
+    if ($sartlar) {
+        $sql .= ' WHERE ' . implode(' AND ', $sartlar);
+    }
+    $sql .= ' ORDER BY ' . $siralama;
+
+    $sorgu = db()->prepare($sql);
+    $sorgu->execute($param);
     return array_map('kayitDuzenle', $sorgu->fetchAll());
+}
+
+/**
+ * Filtrelerden bağımsız olarak duruma göre kayıt sayılarını döndürür.
+ * ['toplam' => 5, 'Planlandı' => 2, 'Devam ediyor' => 2, 'Tamamlandı' => 1]
+ */
+function kayitOzeti(): array
+{
+    $ozet = ['toplam' => 0];
+    foreach (durumListesi() as $durum) {
+        $ozet[$durum] = 0;
+    }
+    $sorgu = db()->query('SELECT durum, COUNT(*) AS adet FROM kayitlar GROUP BY durum');
+    foreach ($sorgu->fetchAll() as $satir) {
+        $ozet[$satir['durum']] = (int) $satir['adet'];
+        $ozet['toplam'] += (int) $satir['adet'];
+    }
+    return $ozet;
 }
 
 /**
@@ -346,20 +440,6 @@ function hataMesaji(array $hatalar, string $alan): string
     }
     return '<p class="alan-hata" id="' . $alan . '-hata"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> '
         . e($hatalar[$alan]) . '</p>';
-}
-
-/**
- * Belirli durumdaki kayıt sayısını döndürür.
- */
-function durumSay(array $kayitlar, string $durum): int
-{
-    $sayac = 0;
-    foreach ($kayitlar as $kayit) {
-        if ($kayit['durum'] === $durum) {
-            $sayac++;
-        }
-    }
-    return $sayac;
 }
 
 /**
