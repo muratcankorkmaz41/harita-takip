@@ -1,9 +1,12 @@
 <?php
 require_once 'functions.php';
 
+$kullaniciId = girisGerekli();
+
 // Düzenlenecek kaydın id'si adres satırından gelir: duzenle.php?id=3
 $kayitId = idAl($_GET['id'] ?? '');
-$kayit   = $kayitId > 0 ? kayitBul($kayitId) : null;
+// kayitBul() yalnızca bu kullanıcıya ait kaydı döndürür
+$kayit   = $kayitId > 0 ? kayitBul($kayitId, $kullaniciId) : null;
 
 if ($kayit === null) {
     bildirimAyarla('Düzenlenmek istenen kayıt bulunamadı.', 'hata');
@@ -20,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $hatalar = kayitDogrula($veri);
 
     if (count($hatalar) === 0) {
-        kayitGuncelle($kayitId, $veri);
+        kayitGuncelle($kayitId, $kullaniciId, $veri);
         bildirimAyarla('Kayıt güncellendi: ' . $veri['baslik'], 'basari', $kayitId, 'Güncellendi');
         yonlendir('index.php#kayitlar');
     }

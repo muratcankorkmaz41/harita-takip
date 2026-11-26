@@ -1,6 +1,8 @@
 <?php
 require_once 'functions.php';
 
+$kullaniciId = girisGerekli();
+
 // Silme işlemi yalnızca POST ile yapılır. Böylece bir bağlantıya tıklamak
 // ya da adresi tarayıcıda açmak kayıt silmez.
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -12,9 +14,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 csrfDogrula();
 
 $id    = idAl($_POST['id'] ?? '');
-$kayit = $id > 0 ? kayitBul($id) : null;
+$kayit = $id > 0 ? kayitBul($id, $kullaniciId) : null;   // başkasının kaydıysa null
 
-if ($kayit !== null && kayitSil($id)) {
+if ($kayit !== null && kayitSil($id, $kullaniciId)) {
     bildirimAyarla('Kayıt silindi: ' . $kayit['baslik']);
 } else {
     bildirimAyarla('Silinmek istenen kayıt bulunamadı.', 'hata');

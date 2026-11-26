@@ -1,6 +1,8 @@
 <?php
 require_once 'functions.php';
 
+$kullaniciId = girisGerekli();
+
 $hatalar = [];
 
 // Form ilk açıldığında gösterilecek varsayılan değerler
@@ -23,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Hata yoksa kaydet ve ana sayfaya yönlendir (Post/Redirect/Get)
     if (count($hatalar) === 0) {
-        $yeniId = kayitEkle($veri);
+        $yeniId = kayitEkle($kullaniciId, $veri);
         bildirimAyarla('Kayıt başarıyla eklendi: ' . $veri['baslik'], 'basari', $yeniId, 'Yeni');
         yonlendir('index.php#kayitlar');
     }

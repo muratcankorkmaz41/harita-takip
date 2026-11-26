@@ -1,9 +1,12 @@
 <?php
 require_once 'functions.php';
 
+// Yalnızca giriş yapmış kullanıcılar; tüm sorgular bu kullanıcının id'si ile sınırlanır
+$kullaniciId = girisGerekli();
+
 // Arama, filtre ve sıralama değerleri adres satırından (GET) okunur
 $kosul    = listeKosullariAl();
-$kayitlar = kayitlariGetir($kosul);
+$kayitlar = kayitlariGetir($kullaniciId, $kosul);
 $filtreVar = $kosul['q'] !== '' || $kosul['durum'] !== '' || $kosul['kategori'] !== '';
 
 // Ekleme, güncelleme ya da silmeden sonra bırakılan bildirim (bir kez gösterilir)
@@ -11,7 +14,7 @@ $bildirim = bildirimAl();
 $vurguId  = $bildirim['vurguId'] ?? 0;
 
 // Özet sayıları (filtrelerden bağımsız, tüm kayıtlar)
-$ozet      = kayitOzeti();
+$ozet      = kayitOzeti($kullaniciId);
 $toplam    = $ozet['toplam'];
 $planlanan = $ozet['Planlandı'];
 $devam     = $ozet['Devam ediyor'];
@@ -29,19 +32,7 @@ require 'header.php';
 
 <main id="icerik">
 
-    <?php if ($bildirim !== null):
-        $hataMi = $bildirim['tur'] === 'hata'; ?>
-        <div class="toast<?php echo $hataMi ? ' hata' : ''; ?>" role="<?php echo $hataMi ? 'alert' : 'status'; ?>" data-toast>
-            <i class="bi <?php echo $hataMi ? 'bi-exclamation-triangle-fill' : 'bi-check2-circle'; ?> toast-ikon" aria-hidden="true"></i>
-            <div>
-                <strong><?php echo $hataMi ? 'İşlem yapılamadı' : 'Başarılı'; ?></strong>
-                <span><?php echo e($bildirim['mesaj']); ?></span>
-            </div>
-            <button type="button" class="toast-kapat" aria-label="Bildirimi kapat" data-toast-kapat>
-                <i class="bi bi-x-lg" aria-hidden="true"></i>
-            </button>
-        </div>
-    <?php endif; ?>
+    <?php require 'bildirim.php'; ?>
 
     <!-- Giriş (hero) bölümü -->
     <section class="hero kapsayici">

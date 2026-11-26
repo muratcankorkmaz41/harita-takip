@@ -878,6 +878,66 @@ img, svg { display: block; max-width: 100%; }
 .islem-btn:hover { background: var(--yuzey-2); color: var(--metin); }
 .islem-btn.tehlike:hover { background: rgba(255, 93, 108, 0.12); border-color: rgba(255, 93, 108, 0.5); color: #ffc2c8; }
 
+/* ---------- Kullanıcı menüsü ---------- */
+.kullanici-menu {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 10px;
+    padding-left: 12px;
+    border-left: 1px solid var(--cizgi-2);
+}
+.kullanici-menu form { margin: 0; }
+.kullanici-ad {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    max-width: 180px;
+    color: var(--soluk);
+    font-size: 14px;
+    font-weight: 550;
+}
+.kullanici-ad span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kullanici-ad .bi { color: var(--vurgu); font-size: 17px; }
+.cikis-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 12px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--soluk);
+    font: inherit;
+    font-size: 14.5px;
+    font-weight: 550;
+    cursor: pointer;
+    transition: color var(--gecis), background var(--gecis);
+}
+.cikis-btn:hover { color: var(--metin); background: var(--yuzey-2); }
+
+/* ---------- Giriş / kayıt sayfaları ---------- */
+.sayfa-giris { display: grid; place-items: start center; padding-top: 56px; padding-bottom: 72px; }
+.giris-kart { width: 100%; max-width: 440px; }
+.giris-ust { text-align: center; margin-bottom: 22px; }
+.giris-ikon {
+    display: inline-grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    margin-bottom: 12px;
+    border-radius: 14px;
+    background: var(--vurgu-yumusak);
+    color: var(--vurgu);
+    font-size: 24px;
+}
+.giris-ust h1 { font-size: 40px; text-transform: uppercase; }
+.giris-ust p { margin: 6px 0 0; color: var(--soluk); font-size: 14.5px; }
+.giris-kart .uyari { margin-bottom: 18px; }
+.buton.tam { width: 100%; justify-content: center; }
+.giris-alt { margin: 18px 0 0; text-align: center; color: var(--soluk); font-size: 14.5px; }
+.giris-alt a { color: var(--vurgu-2); font-weight: 600; }
+
 /* ---------- Bildirim (toast) ---------- */
 .toast {
     position: fixed;
@@ -1005,7 +1065,7 @@ img, svg { display: block; max-width: 100%; }
 .sayac { color: var(--silik); font-size: 12.5px; font-variant-numeric: tabular-nums; }
 .sayac.sinirda { color: var(--devam); }
 
-.alan input[type="text"], .alan textarea {
+.alan input[type="text"], .alan input[type="password"], .alan textarea {
     width: 100%;
     padding: 12px 14px;
     border: 1px solid var(--cizgi-2);
@@ -1025,7 +1085,7 @@ img, svg { display: block; max-width: 100%; }
 }
 .girdi-ikon { position: relative; }
 .girdi-ikon .bi { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--silik); pointer-events: none; }
-.girdi-ikon input[type="text"] { padding-left: 40px; }
+.girdi-ikon input[type="text"], .girdi-ikon input[type="password"] { padding-left: 40px; }
 
 .alan.hatali input, .alan.hatali textarea { border-color: rgba(255, 93, 108, 0.7); }
 .alan.hatali .secenek span { border-color: rgba(255, 93, 108, 0.45); }
@@ -1167,6 +1227,8 @@ img, svg { display: block; max-width: 100%; }
     .marka-logo { width: 36px; height: 36px; }
     .menu a { padding: 9px 11px; }
     .menu a span { display: none; }
+    .kullanici-ad span, .cikis-btn span { display: none; }
+    .kullanici-menu { margin-left: 4px; padding-left: 6px; }
     .menu a .bi { font-size: 17px; }
     .harita { height: 300px; }
     .istatistik { gap: 12px; }

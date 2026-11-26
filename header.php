@@ -3,6 +3,7 @@
 $sayfaBasligi  = $sayfaBasligi ?? 'Ana Sayfa';
 $aktifSayfa    = $aktifSayfa ?? '';
 $haritaGerekli = $haritaGerekli ?? false;
+$kullanici     = oturumKullanici();
 ?>
 <!DOCTYPE html>
 <html lang="tr">
@@ -36,17 +37,39 @@ $haritaGerekli = $haritaGerekli ?? false;
         </a>
 
         <nav class="menu" aria-label="Ana menü">
-            <a href="index.php" class="<?php echo $aktifSayfa === 'ana' ? 'aktif' : ''; ?>"
-               <?php echo $aktifSayfa === 'ana' ? 'aria-current="page"' : ''; ?>>
-                <i class="bi bi-house-door" aria-hidden="true"></i><span>Ana Sayfa</span>
-            </a>
-            <a href="index.php#kayitlar">
-                <i class="bi bi-grid-3x3-gap" aria-hidden="true"></i><span>Kayıtlar</span>
-            </a>
-            <a href="ekle.php" class="menu-cta <?php echo $aktifSayfa === 'ekle' ? 'aktif' : ''; ?>"
-               <?php echo $aktifSayfa === 'ekle' ? 'aria-current="page"' : ''; ?>>
-                <i class="bi bi-plus-lg" aria-hidden="true"></i><span>Yeni Kayıt</span>
-            </a>
+            <?php if ($kullanici !== null): ?>
+                <a href="index.php" class="<?php echo $aktifSayfa === 'ana' ? 'aktif' : ''; ?>"
+                   <?php echo $aktifSayfa === 'ana' ? 'aria-current="page"' : ''; ?>>
+                    <i class="bi bi-house-door" aria-hidden="true"></i><span>Ana Sayfa</span>
+                </a>
+                <a href="index.php#kayitlar">
+                    <i class="bi bi-grid-3x3-gap" aria-hidden="true"></i><span>Kayıtlar</span>
+                </a>
+                <a href="ekle.php" class="menu-cta <?php echo $aktifSayfa === 'ekle' ? 'aktif' : ''; ?>"
+                   <?php echo $aktifSayfa === 'ekle' ? 'aria-current="page"' : ''; ?>>
+                    <i class="bi bi-plus-lg" aria-hidden="true"></i><span>Yeni Kayıt</span>
+                </a>
+                <div class="kullanici-menu">
+                    <span class="kullanici-ad" title="@<?php echo e($kullanici['kullanici_adi']); ?>">
+                        <i class="bi bi-person-circle" aria-hidden="true"></i><span><?php echo e($kullanici['ad_soyad']); ?></span>
+                    </span>
+                    <form method="post" action="cikis.php">
+                        <?php echo csrfAlani(); ?>
+                        <button type="submit" class="cikis-btn" aria-label="Çıkış yap" title="Çıkış yap">
+                            <i class="bi bi-box-arrow-right" aria-hidden="true"></i><span>Çıkış</span>
+                        </button>
+                    </form>
+                </div>
+            <?php else: ?>
+                <a href="giris.php" class="<?php echo $aktifSayfa === 'giris' ? 'aktif' : ''; ?>"
+                   <?php echo $aktifSayfa === 'giris' ? 'aria-current="page"' : ''; ?>>
+                    <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i><span>Giriş Yap</span>
+                </a>
+                <a href="kayit-ol.php" class="menu-cta <?php echo $aktifSayfa === 'kayit-ol' ? 'aktif' : ''; ?>"
+                   <?php echo $aktifSayfa === 'kayit-ol' ? 'aria-current="page"' : ''; ?>>
+                    <i class="bi bi-person-plus" aria-hidden="true"></i><span>Kayıt Ol</span>
+                </a>
+            <?php endif; ?>
         </nav>
     </div>
 </header>
