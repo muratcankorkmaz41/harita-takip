@@ -1,7 +1,9 @@
 <?php
 // functions.php - Harita/Pist Takip Sistemi için yardımcı fonksiyonlar
 
-// Oturumu (session) başlatır. Böylece $_SESSION kullanılabilir.
+require_once __DIR__ . '/baglanti.php';
+
+// Oturumu (session) başlatır. Bildirim mesajları için $_SESSION kullanılır.
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -66,84 +68,25 @@ function durumSinifi(string $durum): string
 }
 
 /**
- * Başlangıçta kullanılan örnek kayıtlar.
- * enlem/boylam isteğe bağlıdır (null = konum yok).
- */
-function ornekKayitlar(): array
-{
-    return [
-        [
-            'id'       => 1,
-            'baslik'   => 'Niksar Merkez Yolları',
-            'kategori' => 'Harita',
-            'durum'    => 'Devam ediyor',
-            'aciklama' => 'Niksar ilçe merkezindeki tüm yolların Blender\'da modellenmesi.',
-            'enlem'    => 40.58959,
-            'boylam'   => 36.95057,
-        ],
-        [
-            'id'       => 2,
-            'baslik'   => 'Niksar Çevre Yolu Pisti',
-            'kategori' => 'Pist',
-            'durum'    => 'Planlandı',
-            'aciklama' => 'Assetto Corsa için çevre yolundan yarış pisti oluşturulacak.',
-            'enlem'    => 40.58005,
-            'boylam'   => 36.96132,
-        ],
-        [
-            'id'       => 3,
-            'baslik'   => 'Blosm ile Yol Verisi Aktarımı',
-            'kategori' => 'Veri',
-            'durum'    => 'Tamamlandı',
-            'aciklama' => 'OpenStreetMap yol verisi Blosm eklentisiyle Blender\'a aktarıldı.',
-            'enlem'    => null,
-            'boylam'   => null,
-        ],
-        [
-            'id'       => 4,
-            'baslik'   => 'KSEditor Pist Ayarları',
-            'kategori' => 'Pist',
-            'durum'    => 'Devam ediyor',
-            'aciklama' => 'Pistin KSEditor\'da yüzey, kamera ve spawn noktası ayarları.',
-            'enlem'    => 40.58060,
-            'boylam'   => 36.94107,
-        ],
-        [
-            'id'       => 5,
-            'baslik'   => 'Yol Dokuları ve Çizgiler',
-            'kategori' => 'Harita',
-            'durum'    => 'Planlandı',
-            'aciklama' => 'Asfalt dokusu, orta çizgi ve kenar çizgilerinin eklenmesi.',
-            'enlem'    => 40.59198,
-            'boylam'   => 36.95936,
-        ],
-    ];
-}
-
-/**
- * Kayıtları $_SESSION'dan döndürür.
- * Oturumda henüz kayıt yoksa örnek kayıtlarla başlatır.
+ * Veritabanındaki kayıtları en yeniden eskiye doğru listeler.
  */
 function kayitlariGetir(): array
 {
-    if (!isset($_SESSION['kayitlar'])) {
-        $_SESSION['kayitlar'] = ornekKayitlar();
-    }
-    return $_SESSION['kayitlar'];
+    $sorgu = db()->query('SELECT id, baslik, kategori, durum, aciklama, enlem, boylam
+                          FROM kayitlar ORDER BY id DESC');
+    return array_map('kayitDuzenle', $sorgu->fetchAll());
 }
 
 /**
- * Yeni kayıt için bir sonraki id numarasını üretir.
+ * Veritabanından gelen satırdaki sayısal alanları doğru türe çevirir.
+ * (PDO, DECIMAL değerlerini metin olarak döndürür.)
  */
-function yeniIdUret(array $kayitlar): int
+function kayitDuzenle(array $satir): array
 {
-    $enBuyuk = 0;
-    foreach ($kayitlar as $kayit) {
-        if ($kayit['id'] > $enBuyuk) {
-            $enBuyuk = $kayit['id'];
-        }
-    }
-    return $enBuyuk + 1;
+    $satir['id']     = (int) $satir['id'];
+    $satir['enlem']  = $satir['enlem']  !== null ? (float) $satir['enlem']  : null;
+    $satir['boylam'] = $satir['boylam'] !== null ? (float) $satir['boylam'] : null;
+    return $satir;
 }
 
 /**
@@ -209,26 +152,38 @@ function kayitDogrula(array $veri): array
 }
 
 /**
- * Yeni kaydı $_SESSION içindeki listeye ekler ve yeni kaydın id'sini döndürür.
+ * Konum alanlarını veritabanına yazılacak hale getirir (boşsa NULL).
+ */
+function konumDegerleri(array $veri): array
+{
+    $konumVar = ($veri['enlem'] ?? '') !== '' && ($veri['boylam'] ?? '') !== '';
+    return [
+        $konumVar ? round((float) $veri['enlem'], 6) : null,
+        $konumVar ? round((float) $veri['boylam'], 6) : null,
+    ];
+}
+
+/**
+ * Yeni kaydı veritabanına ekler ve yeni kaydın id'sini döndürür.
+ * Değerler hazır ifade (prepared statement) parametreleriyle gönderilir,
+ * böylece kullanıcı girdisi SQL komutu olarak yorumlanamaz.
  */
 function kayitEkle(array $veri): int
 {
-    $kayitlar = kayitlariGetir();
-    $id = yeniIdUret($kayitlar);
-    $konumVar = ($veri['enlem'] ?? '') !== '' && ($veri['boylam'] ?? '') !== '';
+    [$enlem, $boylam] = konumDegerleri($veri);
 
-    $kayitlar[] = [
-        'id'       => $id,
-        'baslik'   => $veri['baslik'],
-        'kategori' => $veri['kategori'],
-        'durum'    => $veri['durum'],
-        'aciklama' => $veri['aciklama'],
-        'enlem'    => $konumVar ? round((float) $veri['enlem'], 6) : null,
-        'boylam'   => $konumVar ? round((float) $veri['boylam'], 6) : null,
-    ];
+    $sorgu = db()->prepare('INSERT INTO kayitlar (baslik, kategori, durum, aciklama, enlem, boylam)
+                            VALUES (:baslik, :kategori, :durum, :aciklama, :enlem, :boylam)');
+    $sorgu->execute([
+        ':baslik'   => $veri['baslik'],
+        ':kategori' => $veri['kategori'],
+        ':durum'    => $veri['durum'],
+        ':aciklama' => $veri['aciklama'],
+        ':enlem'    => $enlem,
+        ':boylam'   => $boylam,
+    ]);
 
-    $_SESSION['kayitlar'] = $kayitlar;
-    return $id;
+    return (int) db()->lastInsertId();
 }
 
 /**
