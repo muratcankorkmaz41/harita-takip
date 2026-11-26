@@ -841,6 +841,37 @@ img, svg { display: block; max-width: 100%; }
 .bos-durum p { margin: 0 0 10px; }
 .bos-durum[hidden] { display: none; }
 
+/* Kart işlemleri (düzenle / sil) */
+.kart-islemler {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--cizgi-2);
+}
+.kart-islemler form { margin: 0; display: contents; }
+.islem-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 9px;
+    border: 1px solid var(--cizgi-2);
+    background: transparent;
+    color: var(--soluk);
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background var(--gecis), color var(--gecis), border-color var(--gecis);
+}
+.islem-btn:hover { background: var(--yuzey-2); color: var(--metin); }
+.islem-btn.tehlike:hover { background: rgba(255, 93, 108, 0.12); border-color: rgba(255, 93, 108, 0.5); color: #ffc2c8; }
+
 /* ---------- Bildirim (toast) ---------- */
 .toast {
     position: fixed;
@@ -860,6 +891,7 @@ img, svg { display: block; max-width: 100%; }
     animation: toast-gir 420ms cubic-bezier(.2,.8,.2,1) both;
 }
 .toast.cikiyor { animation: toast-cik 260ms ease-in both; }
+.toast.hata .toast-ikon { color: var(--hata); }
 .toast-ikon { color: var(--tamam); font-size: 22px; line-height: 1; margin-top: 1px; }
 .toast strong { display: block; font-size: 14.5px; }
 .toast span { color: var(--soluk); font-size: 14px; overflow-wrap: anywhere; }

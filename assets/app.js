@@ -396,6 +396,19 @@
     }
 
     /* ------------------------------------------------------------------
+       8) Silme formları: göndermeden önce onay iste
+       ------------------------------------------------------------------ */
+    function silmeOnayi() {
+        $$('form[data-onay]').forEach(function (form) {
+            form.addEventListener('submit', function (olay) {
+                if (!window.confirm(form.getAttribute('data-onay'))) {
+                    olay.preventDefault();
+                }
+            });
+        });
+    }
+
+    /* ------------------------------------------------------------------
        Başlat
        ------------------------------------------------------------------ */
     belirmeyiBaslat();
@@ -407,4 +420,5 @@
     hataTemizleyici();
     onizlemeyiBaslat();
     konumSeciciyiBaslat();
+    silmeOnayi();
 })();

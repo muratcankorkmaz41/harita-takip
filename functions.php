@@ -17,6 +17,60 @@ function e($deger): string
 }
 
 /**
+ * Başka bir sayfaya yönlendirir ve betiği sonlandırır.
+ */
+function yonlendir(string $adres): void
+{
+    header('Location: ' . $adres);
+    exit;
+}
+
+/**
+ * Bir sonraki sayfada bir kez gösterilecek bildirimi oturuma yazar.
+ * $vurguId verilirse o kayıt kartı vurgulanır ve üstünde $etiket yazar.
+ */
+function bildirimAyarla(string $mesaj, string $tur = 'basari', int $vurguId = 0, string $etiket = 'Yeni'): void
+{
+    $_SESSION['bildirim'] = ['mesaj' => $mesaj, 'tur' => $tur, 'vurguId' => $vurguId, 'etiket' => $etiket];
+}
+
+/**
+ * Oturumdaki bildirimi döndürür ve siler (yoksa null).
+ */
+function bildirimAl(): ?array
+{
+    $bildirim = $_SESSION['bildirim'] ?? null;
+    unset($_SESSION['bildirim']);
+    return is_array($bildirim) ? $bildirim : null;
+}
+
+/* --------------------------------------------------------------------------
+   CSRF koruması: veri değiştiren her POST formu oturuma özel bir anahtar taşır.
+   Başka bir siteden gönderilen sahte formlar bu anahtarı bilemez.
+   -------------------------------------------------------------------------- */
+function csrfToken(): string
+{
+    if (empty($_SESSION['csrf'])) {
+        $_SESSION['csrf'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf'];
+}
+
+function csrfAlani(): string
+{
+    return '<input type="hidden" name="csrf" value="' . e(csrfToken()) . '">';
+}
+
+function csrfDogrula(): void
+{
+    $gelen = $_POST['csrf'] ?? '';
+    if (!is_string($gelen) || !hash_equals(csrfToken(), $gelen)) {
+        http_response_code(400);
+        exit('Geçersiz form isteği. Sayfayı yenileyip tekrar deneyin.');
+    }
+}
+
+/**
  * Seçilebilecek kategorilerin listesi.
  */
 function kategoriListesi(): array
@@ -87,6 +141,48 @@ function kayitDuzenle(array $satir): array
     $satir['enlem']  = $satir['enlem']  !== null ? (float) $satir['enlem']  : null;
     $satir['boylam'] = $satir['boylam'] !== null ? (float) $satir['boylam'] : null;
     return $satir;
+}
+
+/**
+ * Tek bir kaydı id ile getirir. Kayıt yoksa null döner.
+ */
+function kayitBul(int $id): ?array
+{
+    $sorgu = db()->prepare('SELECT id, baslik, kategori, durum, aciklama, enlem, boylam
+                            FROM kayitlar WHERE id = :id');
+    $sorgu->execute([':id' => $id]);
+    $satir = $sorgu->fetch();
+    return $satir ? kayitDuzenle($satir) : null;
+}
+
+/**
+ * Formdan gelen alanları okur (ekleme ve düzenleme formu için ortak).
+ */
+function formVerisiAl(): array
+{
+    return [
+        'baslik'   => postAl('baslik'),
+        'kategori' => postAl('kategori'),
+        'durum'    => postAl('durum'),
+        'aciklama' => postAl('aciklama'),
+        'enlem'    => postAl('enlem'),
+        'boylam'   => postAl('boylam'),
+    ];
+}
+
+/**
+ * Veritabanındaki kaydı forma doldurulacak metin değerlerine çevirir.
+ */
+function kayittanFormVerisi(array $kayit): array
+{
+    return [
+        'baslik'   => $kayit['baslik'],
+        'kategori' => $kayit['kategori'],
+        'durum'    => $kayit['durum'],
+        'aciklama' => $kayit['aciklama'],
+        'enlem'    => $kayit['enlem']  !== null ? number_format($kayit['enlem'], 6, '.', '')  : '',
+        'boylam'   => $kayit['boylam'] !== null ? number_format($kayit['boylam'], 6, '.', '') : '',
+    ];
 }
 
 /**
@@ -184,6 +280,72 @@ function kayitEkle(array $veri): int
     ]);
 
     return (int) db()->lastInsertId();
+}
+
+/**
+ * Var olan kaydı günceller. Kayıt bulunduysa true döner.
+ */
+function kayitGuncelle(int $id, array $veri): bool
+{
+    [$enlem, $boylam] = konumDegerleri($veri);
+
+    $sorgu = db()->prepare('UPDATE kayitlar
+                            SET baslik = :baslik, kategori = :kategori, durum = :durum,
+                                aciklama = :aciklama, enlem = :enlem, boylam = :boylam
+                            WHERE id = :id');
+    $sorgu->execute([
+        ':baslik'   => $veri['baslik'],
+        ':kategori' => $veri['kategori'],
+        ':durum'    => $veri['durum'],
+        ':aciklama' => $veri['aciklama'],
+        ':enlem'    => $enlem,
+        ':boylam'   => $boylam,
+        ':id'       => $id,
+    ]);
+
+    // Değerler değişmediyse rowCount 0 olabilir; bu yüzden kaydın varlığını ayrıca kontrol ederiz
+    return $sorgu->rowCount() > 0 || kayitBul($id) !== null;
+}
+
+/**
+ * Kaydı siler. Bir satır silindiyse true döner.
+ */
+function kayitSil(int $id): bool
+{
+    $sorgu = db()->prepare('DELETE FROM kayitlar WHERE id = :id');
+    $sorgu->execute([':id' => $id]);
+    return $sorgu->rowCount() > 0;
+}
+
+/**
+ * Adres satırından ya da formdan gelen id değerini pozitif tam sayıya çevirir (geçersizse 0).
+ */
+function idAl($deger): int
+{
+    $id = filter_var($deger, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+    return $id === false ? 0 : $id;
+}
+
+/**
+ * Bir alan hatalıysa form elemanına eklenecek erişilebilirlik öznitelikleri.
+ */
+function hataOznitelik(array $hatalar, string $alan): string
+{
+    return isset($hatalar[$alan])
+        ? 'aria-invalid="true" aria-describedby="' . $alan . '-hata"'
+        : '';
+}
+
+/**
+ * Alanın altında gösterilecek hata mesajı.
+ */
+function hataMesaji(array $hatalar, string $alan): string
+{
+    if (!isset($hatalar[$alan])) {
+        return '';
+    }
+    return '<p class="alan-hata" id="' . $alan . '-hata"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> '
+        . e($hatalar[$alan]) . '</p>';
 }
 
 /**

@@ -3,17 +3,9 @@ require_once 'functions.php';
 
 $kayitlar = kayitlariGetir();
 
-// Kayıt eklendikten sonra ekle.php'nin bıraktığı başarı mesajı (bir kez gösterilir)
-$mesaj = '';
-if (isset($_SESSION['mesaj'])) {
-    $mesaj = $_SESSION['mesaj'];
-    unset($_SESSION['mesaj']);
-}
-$yeniId = 0;
-if (isset($_SESSION['yeniId'])) {
-    $yeniId = (int) $_SESSION['yeniId'];
-    unset($_SESSION['yeniId']);
-}
+// Ekleme, güncelleme ya da silmeden sonra bırakılan bildirim (bir kez gösterilir)
+$bildirim = bildirimAl();
+$vurguId  = $bildirim['vurguId'] ?? 0;
 
 // Özet sayıları
 $toplam    = count($kayitlar);
@@ -32,12 +24,13 @@ require 'header.php';
 
 <main id="icerik">
 
-    <?php if ($mesaj !== ''): ?>
-        <div class="toast" role="status" data-toast>
-            <i class="bi bi-check2-circle toast-ikon" aria-hidden="true"></i>
+    <?php if ($bildirim !== null):
+        $hataMi = $bildirim['tur'] === 'hata'; ?>
+        <div class="toast<?php echo $hataMi ? ' hata' : ''; ?>" role="<?php echo $hataMi ? 'alert' : 'status'; ?>" data-toast>
+            <i class="bi <?php echo $hataMi ? 'bi-exclamation-triangle-fill' : 'bi-check2-circle'; ?> toast-ikon" aria-hidden="true"></i>
             <div>
-                <strong>Başarılı</strong>
-                <span><?php echo e($mesaj); ?></span>
+                <strong><?php echo $hataMi ? 'İşlem yapılamadı' : 'Başarılı'; ?></strong>
+                <span><?php echo e($bildirim['mesaj']); ?></span>
             </div>
             <button type="button" class="toast-kapat" aria-label="Bildirimi kapat" data-toast-kapat>
                 <i class="bi bi-x-lg" aria-hidden="true"></i>
@@ -168,14 +161,14 @@ require 'header.php';
                     $kat   = kategoriBilgi($kayit['kategori']);
                     $durum = durumBilgi($kayit['durum']);
                     $konumVar = ($kayit['enlem'] ?? null) !== null && ($kayit['boylam'] ?? null) !== null;
-                    $yeni  = (int) $kayit['id'] === $yeniId;
+                    $yeni  = $kayit['id'] === $vurguId;
                 ?>
                     <article class="kart reveal durum-<?php echo $durum['anahtar']; ?><?php echo $yeni ? ' yeni' : ''; ?>"
                              data-durum="<?php echo $durum['anahtar']; ?>"
                              data-kategori="<?php echo e($kayit['kategori']); ?>"
                              data-id="<?php echo (int) $kayit['id']; ?>">
                         <?php if ($yeni): ?>
-                            <span class="yeni-rozet">Yeni</span>
+                            <span class="yeni-rozet"><?php echo e($bildirim['etiket'] ?? 'Yeni'); ?></span>
                         <?php endif; ?>
                         <div class="kart-ust">
                             <span class="kategori-rozet <?php echo $kat['sinif']; ?>">
@@ -198,6 +191,19 @@ require 'header.php';
                             <?php else: ?>
                                 <span class="konum-yok"><i class="bi bi-geo-alt" aria-hidden="true"></i> Konum yok</span>
                             <?php endif; ?>
+                        </div>
+                        <div class="kart-islemler">
+                            <a class="islem-btn" href="duzenle.php?id=<?php echo $kayit['id']; ?>">
+                                <i class="bi bi-pencil" aria-hidden="true"></i> Düzenle
+                            </a>
+                            <form method="post" action="sil.php" class="sil-formu"
+                                  data-onay="&quot;<?php echo e($kayit['baslik']); ?>&quot; kaydı kalıcı olarak silinsin mi?">
+                                <?php echo csrfAlani(); ?>
+                                <input type="hidden" name="id" value="<?php echo $kayit['id']; ?>">
+                                <button type="submit" class="islem-btn tehlike">
+                                    <i class="bi bi-trash3" aria-hidden="true"></i> Sil
+                                </button>
+                            </form>
                         </div>
                     </article>
                 <?php endforeach; ?>
